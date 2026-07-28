@@ -1,0 +1,200 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "TEST HUB",
+    Icon = "rbxassetid://117649776522765",
+    Folder = "TestHub",
+    Size = UDim2.fromOffset(580, 460),
+    Transparent = true,
+    Theme = "Dark",
+    AccentColor = Color3.fromRGB(120, 220, 255)
+})
+
+local Tab = Window:Tab({Title = "เมนูหลัก", Icon = "box"})
+
+_G.autoOrb = false
+
+task.spawn(function()
+    local Event = game:GetService("ReplicatedStorage").rEvents.orbEvent
+    local orbs = {"Blue Orb", "Yellow Orb", "Red Orb", "Orange Orb"}
+    
+    while true do
+        if _G.autoOrb then
+            for _, orbName in ipairs(orbs) do
+                Event:FireServer("collectOrb", orbName, "City")
+            end
+        end
+        task.wait() 
+    end
+end)
+
+local Toggle = Tab:Toggle({
+    Title = "เสกพลัง",
+    Value = false, 
+    Callback = function(state) 
+        _G.autoOrb = state
+    end
+})
+
+_G.autoGem = false
+
+task.spawn(function()
+    while true do
+        task.wait() 
+        if _G.autoGem then
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").rEvents.orbEvent
+                Event:FireServer(
+                    "collectOrb",
+                    "Gem",
+                    "City"
+                )
+            end)
+        end
+    end
+end)
+
+Tab:Toggle({
+    Title = "เสกเพชร",
+    Value = false,
+    Callback = function(state)
+        _G.autoGem = state
+    end
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local originalData = {} 
+local isAligned = false
+
+local function toggleAlignHoops(state)
+    isAligned = state
+    
+    local hoopFolder = workspace:FindFirstChild("Hoops")
+    if not hoopFolder then
+        return
+    end
+
+    local items = hoopFolder:GetChildren()
+    if isAligned then
+        originalData = {}
+        local character = LocalPlayer.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        
+        local startCFrame = rootPart and (rootPart.CFrame * CFrame.new(0, 0, 0)) or CFrame.new(0, 0, 0)
+        local spacing = 0 
+        local count = 0
+
+        for _, item in ipairs(items) do
+            local targetPart = item
+            if item:IsA("Model") then
+                targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+            end
+
+            if targetPart and targetPart:IsA("BasePart") then
+
+                if item:IsA("Model") and item.PrimaryPart then
+                    originalData[item] = item:GetPrimaryPartCFrame()
+                else
+                    originalData[item] = targetPart.CFrame
+                end
+
+                local newCFrame = startCFrame * CFrame.new(count * spacing, 0, 0)
+                
+                if item:IsA("Model") and item.PrimaryPart then
+                    item:SetPrimaryPartCFrame(newCFrame)
+                    for _, p in ipairs(item:GetDescendants()) do
+                        if p:IsA("BasePart") then p.CanCollide = false end
+                    end
+                else
+                    targetPart.CFrame = newCFrame
+                    targetPart.CanCollide = false
+                end
+                
+                targetPart.Anchored = true
+                count = count + 1
+            end
+        end    
+    else
+
+        for item, originalCFrame in pairs(originalData) do
+            if item and item.Parent then
+                local targetPart = item
+                if item:IsA("Model") then
+                    targetPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                end
+
+                if targetPart and targetPart:IsA("BasePart") then
+                    if item:IsA("Model") and item.PrimaryPart then
+                        item:SetPrimaryPartCFrame(originalCFrame)
+                        for _, p in ipairs(item:GetDescendants()) do
+                            if p:IsA("BasePart") then p.CanCollide = true end
+                        end
+                    else
+                        targetPart.CFrame = originalCFrame
+                        targetPart.CanCollide = true
+                    end
+                    targetPart.Anchored = false
+                end
+            end
+        end
+        originalData = {}
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait()
+        if isAligned then
+            pcall(function()
+                local hoopFolder = workspace:FindFirstChild("Hoops")
+                if hoopFolder then
+                    local character = LocalPlayer.Character
+                    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+                    if rootPart then
+                        local targetCFrame = rootPart.CFrame * CFrame.new(0, 0, 0)
+                        
+                        for _, item in ipairs(hoopFolder:GetChildren()) do
+                            if item:IsA("Model") and item.PrimaryPart then
+                                item:SetPrimaryPartCFrame(targetCFrame)
+                            elseif item:IsA("BasePart") then
+                                item.CFrame = targetCFrame
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end) 
+
+Tab:Toggle({
+    Title = "ฟาร์ม Hoops โคตรโกง",
+    Value = false,
+    Callback = function(state)
+        toggleAlignHoops(state)
+    end
+})
+
+_G.autoRebirth = false
+
+task.spawn(function()
+    while true do
+        task.wait() 
+        if _G.autoRebirth then
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").rEvents.rebirthEvent
+                Event:FireServer("rebirthRequest")
+            end)
+        end
+    end
+end)
+
+Tab:Toggle({
+    Title = "ออโต้เกิดใหม่",
+    Value = false,
+    Callback = function(state)
+        _G.autoRebirth = state
+    end
+})
